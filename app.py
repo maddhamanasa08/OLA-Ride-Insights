@@ -475,11 +475,162 @@ elif page == "Booking Search":
 
 elif page == "Power BI Dashboard":
 
-    st.title("📊 Power BI Dashboard")
+    st.title("📊 OLA Business Intelligence")
+    st.caption("Interactive Power BI-style analytics using Streamlit and Plotly")
 
-    st.info(
-        "Paste your Power BI Publish to Web embed URL "
-        "in the application code to display the report here."
+    # KPI SECTION
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("Total Bookings", f"{total_bookings:,}")
+    c2.metric("Successful Rides", f"{success_count:,}")
+    c3.metric("Total Revenue", f"₹{total_revenue:,.0f}")
+
+    success_rate = (
+        success_count / total_bookings * 100
+        if total_bookings else 0
+    )
+
+    c4.metric("Success Rate", f"{success_rate:.2f}%")
+
+    st.divider()
+
+    # CHART SECTION 1
+    left, right = st.columns(2)
+
+    with left:
+        status = (
+            filtered_df["Booking_Status"]
+            .value_counts()
+            .reset_index()
+        )
+        status.columns = ["Status", "Bookings"]
+
+        fig = px.pie(
+            status,
+            names="Status",
+            values="Bookings",
+            hole=0.55,
+            title="Booking Status Breakdown"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    with right:
+        daily = (
+            filtered_df.groupby("Date")
+            .size()
+            .reset_index(name="Bookings")
+        )
+
+        fig = px.line(
+            daily,
+            x="Date",
+            y="Bookings",
+            markers=True,
+            title="Ride Volume Over Time"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # CHART SECTION 2
+    left, right = st.columns(2)
+
+    with left:
+        vehicle = (
+            filtered_df.groupby("Vehicle_Type")
+            ["Ride_Distance"]
+            .sum()
+            .nlargest(5)
+            .reset_index()
+        )
+
+        fig = px.bar(
+            vehicle,
+            x="Vehicle_Type",
+            y="Ride_Distance",
+            title="Top 5 Vehicle Types by Ride Distance"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    with right:
+        revenue = (
+            successful.groupby("Payment_Method")
+            ["Booking_Value"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.bar(
+            revenue,
+            x="Payment_Method",
+            y="Booking_Value",
+            title="Revenue by Payment Method"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # CHART SECTION 3
+    st.subheader("Customer and Driver Intelligence")
+
+    left, right = st.columns(2)
+
+    with left:
+        customer = (
+            successful.groupby("Customer_ID")
+            ["Booking_Value"]
+            .sum()
+            .nlargest(5)
+            .reset_index()
+        )
+
+        fig = px.bar(
+            customer,
+            x="Customer_ID",
+            y="Booking_Value",
+            title="Top 5 Customers by Booking Value"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    with right:
+        ratings = filtered_df[
+            ["Customer_Rating", "Driver_Ratings"]
+        ].melt(
+            var_name="Rating Type",
+            value_name="Rating"
+        ).dropna()
+
+        fig = px.histogram(
+            ratings,
+            x="Rating",
+            color="Rating Type",
+            barmode="group",
+            title="Customer vs Driver Ratings"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    st.divider()
+
+    # DATA EXPLORER
+    st.subheader("Detailed Booking Records")
+
+    st.dataframe(
+        filtered_df,
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.download_button(
+        "Download Filtered Data",
+        filtered_df.to_csv(index=False),
+        file_name="ola_filtered_data.csv",
+        mime="text/csv"
     )
 
     st.write(
